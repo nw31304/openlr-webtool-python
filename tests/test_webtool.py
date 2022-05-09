@@ -5,12 +5,21 @@ from openlr_dereferencer.decoding import LineLocation, Config
 from openlr import FOW, FRC
 from typing import Dict
 
+LINES_TABLE = "lines"
+NODES_TABLE = "nodes"
+USER = ""
+PASSWORD = ""
+DBNAME = "openlr"
+HOST = ""
+SCHEMA = "test"
+PORT = 5432
+
 rdr = WebToolMapReader(
-    lines_table = "lines",
-    nodes_table = "nodes",
-    dbname = "openlr",
+    lines_table = LINES_TABLE,
+    nodes_table = NODES_TABLE,
+    dbname = DBNAME,
     host = "",
-    schema = "test",
+    schema = SCHEMA,
     port = 5432
 )
 
@@ -151,10 +160,14 @@ def test_length():
 
 def test_match():
     rdr = WebToolMapReader(
-        schema="test", 
-        lines_table="lines", 
-        nodes_table="nodes"
+        lines_table = LINES_TABLE,
+        nodes_table = NODES_TABLE,
+        dbname = DBNAME,
+        host = "",
+        schema = SCHEMA,
+        port = 5432
     )
+
     with raises(Exception) as e_info:
         res = rdr.match("C2Br9xiypCOYCv1L/9kjBw==")
 
@@ -207,9 +220,12 @@ def test_match_default():
     )
 
     rdr = WebToolMapReader(
-        schema="test", 
-        lines_table="lines", 
-        nodes_table="nodes",
+        lines_table = LINES_TABLE,
+        nodes_table = NODES_TABLE,
+        dbname = DBNAME,
+        host = "",
+        schema = SCHEMA,
+        port = 5432,
         config=my_config
     )
 
