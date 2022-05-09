@@ -31,6 +31,10 @@ SCHEMA = "texas"
 # PostgreSQL port
 PORT = 5432
 
+# Special purpose queue message
+POISON_PILL_MSG="__DONE__"
+FAILED_DECODING_MSG="__FAILED__"
+
 # File containing binary-encoded openlr codes to be matched.
 # One per line, lines terminated by line feeds
 CODES_FN = "/Users/dave/projects/python/openlr/data/texas.openlrs"
@@ -97,15 +101,15 @@ def load_queue(q):
         for line in infile.readlines():
             q.put(line.rstrip())
     for _ in range(WORKER_COUNT):
-        q.put("DONE")
+        q.put(POISON_PILL_MSG)
 
 
 def worker(q_in: Queue, q_out: Queue):
     """
         Each worker takes a record off the queue and attempts to decode it.  If it successful, it places a tuple
         containing the code as well as the decoded coordinates on the writer input queue.  If it is unsuccessful,
-        it places a FAILED message on the writer's queue.  WHen it sees a poison pill message, it places a DONE
-        message on the writer queue and terminates.
+        it places a FAILED_DECODING_MSG message on the writer's queue.  WHen it sees a poison pill message, it 
+        places a POISON_PILL_MSG message on the writer queue and terminates.
     """
 
     def enqueue(r: MapObjects) -> None:
@@ -159,7 +163,7 @@ def worker(q_in: Queue, q_out: Queue):
 
     code = q_in.get()
 
-    while code != "DONE":
+    while code != POISON_PILL_MSG:
         try:
             result = rdr.match(code)
             enqueue(result)
@@ -168,7 +172,7 @@ def worker(q_in: Queue, q_out: Queue):
                 result = rdr.match(code, config=RELAXED_CONFIG)
                 enqueue(result)
             except:
-                q_out.put(("FAILED", None, None, None, None))
+                q_out.put((FAILED_DECODING_MSG, None, None, None, None))
         code = q_in.get()
     q_out.put((code, None, None, None, None))
 
@@ -212,10 +216,10 @@ if __name__ == '__main__':
         while active_workers > 0:
             # get the next GeoSJON object from a worker
             (code, coords, lines, p_off, n_off) = q_out.get()
-            if code == "DONE":
+            if code == POISON_PILL_MSG:
                 # Poison pill:  decrement the worker count
                 active_workers -= 1
-            elif code != "FAILED":
+            elif code != FAILED_DECODING_MSG:
                 # We have a valid geosjon object: write it to the output file
                 outf.write(f"{code}\t{coords}\t{lines}\t{p_off}\t{n_off}\n")
                 successes += 1
