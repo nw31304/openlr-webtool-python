@@ -20,13 +20,12 @@ from __future__ import annotations
 import psycopg2 as pg
 from psycopg2 import sql
 from typing import Iterable, Optional, cast
-from openlr import Coordinates
+from openlr import Coordinates, FRC, FOW
 from openlr_dereferencer.maps import MapReader
 from openlr_dereferencer import decode, Config
 from openlr_dereferencer.decoding import MapObjects, DEFAULT_CONFIG
 import param
 from itertools import chain
-from openlr import Coordinates, FRC, FOW
 from shapely.geometry import LineString, Point
 from shapely.ops import nearest_points
 from shapely import wkb
@@ -353,7 +352,7 @@ class WebToolMapReader(param.Parameterized):
         self.connection = pg.connect(
             host=self.host, port=self.port, user=self.user, password=self.password, dbname=self.dbname)
 
-    def match(self, binstr: str, attempt_fallback: bool = True, clear_cache: bool = True, config: Optional[Config] = None) -> MapObjects:
+    def match(self, binstr: str, clear_cache: bool = True, config: Optional[Config] = None) -> MapObjects:
         """
         Decode an OpenLR binary string
 
