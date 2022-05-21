@@ -248,7 +248,7 @@ class WebToolMapReader(param.Parameterized):
             Default: "openlr"
         schema::str
             DB schema containing `lines` and `nodes` tables
-            Default: "zenrin"
+            Default: "local"
         lines_table:str
             Table containing the lines in the map
             Default: "lines" 
@@ -287,7 +287,7 @@ class WebToolMapReader(param.Parameterized):
             user="openlr",
             password="openlrwpd",
             dbname="openlr",
-            schema="zenrin",
+            schema="local",
             config=myconfig
             )
     >>> rdr.match("C2Br9xiypCOYCv1L/9kjBw==")
@@ -301,7 +301,7 @@ class WebToolMapReader(param.Parameterized):
     dbname = param.String(default="openlr")
 
     # tables
-    schema = param.String(default="zenrin")
+    schema = param.String(default="local")
     lines_table = param.String(default="lines")
     nodes_table = param.String(default="nodes")
 

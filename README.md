@@ -112,4 +112,8 @@ write the results to a tab separated CSV file.  See comments in the file for mor
     - pyproj >= 2.6.1
     - psycopg2 >= 2.8.6
     - param >= 1.12.0
-    - pytest >= 3.5.0 (optional)
+## Optional dependencies
+    - pytest >= 3.5.0 (to run unit tests)
+    - folium >= 0.12.1
+    - panel >= 0.12.6
+    - ipywidgets >= 7.7.0

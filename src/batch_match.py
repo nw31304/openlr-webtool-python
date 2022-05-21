@@ -37,7 +37,7 @@ FAILED_DECODING_MSG="__FAILED__"
 
 # File containing binary-encoded openlr codes to be matched.
 # One per line, lines terminated by line feeds
-CODES_FN = "/Users/dave/projects/python/openlr/data/texas.openlrs"
+CODES_FN = "/Users/dave/projects/python/openlr/data/texas_1000.openlrs"
 
 # Tab separated CSV to be created with decoding results. Fields are:
 # code \t points \t [meta, dir] \t n_off \t p_off
