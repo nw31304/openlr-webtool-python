@@ -1,0 +1,7 @@
+openlr==1.0.1
+openlr_dereferencer==1.2.0
+psycopg2==2.9.8
+psycopg2_binary==2.9.8
+pyproj==3.6.1
+pytest==8.1.1
+Shapely==2.0.3
