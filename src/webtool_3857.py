@@ -24,9 +24,9 @@ from openlr import binary_decode
 from psycopg2 import sql
 
 from geotool_3857 import GeoTool_3857
-from openlr_dereferencer import decode, Config
-from openlr_dereferencer.decoding import MapObjects
-from openlr_dereferencer.maps import MapReader
+from openlr_dereferencer_python.openlr_dereferencer import decode, Config
+from openlr_dereferencer_python.openlr_dereferencer.decoding import MapObjects
+from openlr_dereferencer_python.openlr_dereferencer.maps import MapReader
 from webtool import WebToolMapReader, NODE_QUERY, LINE_QUERY, LINE_QUERY_SELECT, REV_LINE_QUERY_SELECT
 
 

@@ -31,11 +31,11 @@ from shapely import wkb
 from shapely.geometry import LineString, Point
 from shapely.ops import nearest_points
 
-from openlr_dereferencer import decode, Config
-from openlr_dereferencer.decoding import MapObjects, DEFAULT_CONFIG
-from openlr_dereferencer.maps import Line as AbstractLine, Node as AbstractNode
-from openlr_dereferencer.maps import MapReader
-from openlr_dereferencer.maps.abstract import GeoTool
+from openlr_dereferencer_python.openlr_dereferencer import decode, Config
+from openlr_dereferencer_python.openlr_dereferencer.decoding import MapObjects, DEFAULT_CONFIG
+from openlr_dereferencer_python.openlr_dereferencer.maps import Line as AbstractLine, Node as AbstractNode
+from openlr_dereferencer_python.openlr_dereferencer.maps import MapReader
+from openlr_dereferencer_python.openlr_dereferencer.maps.abstract import GeoTool
 
 GEOD = Geod(ellps="WGS84")
 SQRT_2 = sqrt(2)
@@ -59,9 +59,6 @@ class Line(AbstractLine):
             instance of WebToolMapReader
         line_id:int
             integer identifier of this line
-        meta:str
-            arbitrary string metadata used to identify this line in
-            customer's datastore
         fow:FOW
             form-of-way of this line
         frc: FRC
@@ -78,10 +75,9 @@ class Line(AbstractLine):
             shapely LineString representing this line's geometry
     """
 
-    def __init__(self, map_reader: TomTomMapReaderSQLite, line_id: int, meta: str, fow: FOW, frc: FRC, length: float,
+    def __init__(self, map_reader: TomTomMapReaderSQLite, line_id: int, fow: FOW, frc: FRC, length: float,
                  from_int: int | Node, to_int: int | Node, geometry: LineString):
         self.id = line_id
-        self._meta = meta
         self.map_reader = map_reader
         self._fow: FOW = fow
         self._frc: FRC = frc
@@ -97,11 +93,6 @@ class Line(AbstractLine):
     def line_id(self) -> int:
         """Returns the line id"""
         return self.id
-
-    @property
-    def meta(self) -> str:
-        """Returns the metadata"""
-        return self._meta
 
     @property
     def start_node(self) -> "Node":
@@ -185,14 +176,14 @@ class Node(AbstractNode):
                                (self.node_id, self.node_id))
                 # end_time = time();
                 # print(f"Outgoing lines query: {end_time - start_time}")
-                for (line_id, meta, fow, flowdir, frc, length, from_int, to_int, geom) in cursor:
+                for (line_id, fow, flowdir, frc, length, from_int, to_int, geom) in cursor:
                     line = self.map_reader.line_cache.get(line_id)
                     if line is not None:
                         self.outgoing_lines_cache.append(line)
                         yield line
                     else:
                         ls = LineString(wkb.loads(geom, hex=False))
-                        line = Line(self.map_reader, line_id, meta, FOW(
+                        line = Line(self.map_reader, line_id, FOW(
                             fow), FRC(frc), length, self, to_int, ls)
                         self.map_reader.line_cache[line_id] = line
                         self.outgoing_lines_cache.append(line)
@@ -209,14 +200,14 @@ class Node(AbstractNode):
                                (self.node_id, self.node_id))
                 # end_time = time();
                 # print(f"Incoming lines query: {end_time - start_time}")
-                for (line_id, meta, fow, flowdir, frc, length, from_int, to_int, geom) in cursor:
+                for (line_id, fow, flowdir, frc, length, from_int, to_int, geom) in cursor:
                     l = self.map_reader.line_cache.get(line_id)
                     if l is not None:
                         self.incoming_lines_cache.append(l)
                         yield l
                     else:
                         ls = LineString(wkb.loads(geom, hex=False))
-                        l = Line(self.map_reader, line_id, meta, FOW(
+                        l = Line(self.map_reader, line_id, FOW(
                             fow), FRC(frc), length, from_int, self, ls)
                         self.map_reader.line_cache[line_id] = l
                         self.incoming_lines_cache.append(l)
@@ -299,8 +290,8 @@ class TomTomMapReaderSQLite(MapReader):
         self.config = config
         self.node_cache = {}
         self.line_cache = {}
-        self.line_query_select = "select id,uuid,fow,direction,frc,length,start_id as from_int,end_id as to_int,st_asbinary(geom) as geom"
-        self.rev_line_query_select = "select ('-' || id),uuid,fow,direction,frc,length,end_id as from_int,start_id as to_int,st_asbinary(st_reverse(geom)) as geom"
+        self.line_query_select = "select id,fow,direction,frc,length,start_id as from_int,end_id as to_int,st_asbinary(geom) as geom"
+        self.rev_line_query_select = "select ('-' || id),fow,direction,frc,length,end_id as from_int,start_id as to_int,st_asbinary(st_reverse(geom)) as geom"
         self.node_query_select = "select id,st_x(geom),st_y(geom)"
         self.line_query = self.line_query_select + f" from {self.lines_table}"
         self.rev_line_query = self.rev_line_query_select + f" from {self.lines_table}"
@@ -385,13 +376,13 @@ class TomTomMapReaderSQLite(MapReader):
             cursor.execute(self.get_lines_query)
             # end_time = time();
             # print(f"get_lines query: {end_time - start_time}")
-            for (line_id, meta, fow, flowdir, frc, length, from_int, to_int, geom) in cursor:
+            for (line_id, fow, flowdir, frc, length, from_int, to_int, geom) in cursor:
                 line = self.line_cache.get(line_id)
                 if line is not None:
                     yield line
                 else:
                     ls = LineString(wkb.loads(geom, hex=False))
-                    line = Line(self, line_id, meta, FOW(fow), FRC(
+                    line = Line(self, line_id, FOW(fow), FRC(
                         frc), length, from_int, to_int, ls)
                     self.line_cache[line_id] = line
                     yield line
@@ -486,12 +477,12 @@ class TomTomMapReaderSQLite(MapReader):
             cursor.execute(self.find_lines_close_to_query, (lon, lat, lons[0], lats[0], lons[1], lats[1], dist))
             # end_time = time();
             # print(f"find_lines_close_to query: {end_time - start_time}")
-            for (line_id, meta, fow, _, frc, length, from_int, to_int, geom) in cursor:
+            for (line_id, fow, _, frc, length, from_int, to_int, geom) in cursor:
                 line = self.line_cache.get(line_id)
                 if line is not None:
                     yield line
                 else:
                     ls = LineString(wkb.loads(geom, hex=False))
-                    line = Line(self, line_id, meta, FOW(fow), FRC(frc), length, from_int, to_int, ls)
+                    line = Line(self, line_id, FOW(fow), FRC(frc), length, from_int, to_int, ls)
                     self.line_cache[line_id] = line
                     yield line

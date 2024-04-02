@@ -1,0 +1,6 @@
+[submodule "openlr_dereferencer_python"]
+	path = openlr_dereferencer_python
+	url = git@github.com:nw31304/openlr-dereferencer-python.git
+[submodule "geoutils"]
+	path = geoutils
+	url = https://github.com/davidniedzielski-tomtom/geoutils.git

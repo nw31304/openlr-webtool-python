@@ -1,4 +1,4 @@
-from openlr_dereferencer.decoding import Config
+from openlr_dereferencer_python.openlr_dereferencer.decoding import Config
 from openlr import FRC
 from typing import Dict
 

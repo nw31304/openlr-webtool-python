@@ -17,21 +17,24 @@ Dependencies:
 """
 
 from __future__ import annotations
-import psycopg2 as pg
-from psycopg2 import sql
-from typing import Iterable, Optional, cast, Dict
-from openlr import Coordinates, FRC, FOW
-from openlr_dereferencer.maps import MapReader
-from openlr_dereferencer.maps.abstract import GeoTool
-from openlr_dereferencer import decode, Config
-from openlr_dereferencer.decoding import MapObjects, DEFAULT_CONFIG
+
 from itertools import chain
+from typing import Iterable, Optional, cast, Dict
+
+import psycopg2 as pg
+from openlr import Coordinates, FOW
+from openlr import binary_decode, FRC
+from psycopg2 import sql
+from pyproj import Geod
+from shapely import wkb
 from shapely.geometry import LineString, Point
 from shapely.ops import nearest_points
-from shapely import wkb
-from openlr_dereferencer.maps import Line as AbstractLine, Node as AbstractNode
-from pyproj import Geod
-from openlr import binary_decode, FRC
+
+from openlr_dereferencer_python.openlr_dereferencer import decode, Config
+from openlr_dereferencer_python.openlr_dereferencer.decoding import MapObjects, DEFAULT_CONFIG
+from openlr_dereferencer_python.openlr_dereferencer.maps import Line as AbstractLine, Node as AbstractNode
+from openlr_dereferencer_python.openlr_dereferencer.maps import MapReader
+from openlr_dereferencer_python.openlr_dereferencer.maps.abstract import GeoTool
 
 GEOD = Geod(ellps="WGS84")
 
@@ -80,7 +83,8 @@ class Line(AbstractLine):
             shapely LineString representing this line's geometry
     """
 
-    def __init__(self, map_reader: WebToolMapReader, line_id: int, meta: str, fow: FOW, frc: FRC, length: float, from_int: int | Node, to_int: int | Node, geometry: LineString):
+    def __init__(self, map_reader: WebToolMapReader, line_id: int, meta: str, fow: FOW, frc: FRC, length: float,
+                 from_int: int | Node, to_int: int | Node, geometry: LineString):
         self.id = line_id
         self._meta = meta
         self.map_reader = map_reader
@@ -96,30 +100,30 @@ class Line(AbstractLine):
 
     @property
     def line_id(self) -> int:
-        "Returns the line id"
+        """Returns the line id"""
         return self.id
 
     @property
     def meta(self) -> str:
-        "Returns the metadata"
+        """Returns the metadata"""
         return self._meta
 
     @property
     def start_node(self) -> "Node":
-        if type(self.from_int) == Node:
-            return(self.from_int)  # type:ignore
+        if isinstance(self.from_int, Node):
+            return self.from_int  # type:ignore
         else:
             self.from_int = self.map_reader.get_node(
                 self.from_int)  # type:ignore
-            return(self.from_int)
+            return self.from_int
 
     @property
     def end_node(self) -> "Node":
-        if type(self.to_int) == Node:
-            return(cast(Node, self.to_int))
+        if isinstance(self.to_int, Node):
+            return cast(Node, self.to_int)
         else:
             self.to_int = self.map_reader.get_node(cast(int, self.to_int))
-            return(self.to_int)
+            return self.to_int
 
     @property
     def length(self):
@@ -293,7 +297,8 @@ class WebToolMapReader(MapReader):
 
     """
 
-    def __init__(self, geo_tool : GeoTool, host: str, port: int = 5432, user: str = "", password: str = "", dbname: str = "openlr", schema: str = "local", lines_table: str = "roads",
+    def __init__(self, geo_tool: GeoTool, host: str, port: int = 5432, user: str = "", password: str = "",
+                 dbname: str = "openlr", schema: str = "local", lines_table: str = "roads",
                  nodes_table: str = "intersections", config: Config = DEFAULT_CONFIG):
 
         self.lines_table: str = lines_table
@@ -319,10 +324,11 @@ class WebToolMapReader(MapReader):
         self.get_line_query = sql.SQL(LINE_QUERY + " where id=%s").format(
             schema=sql.Identifier(self.schema),
             table=sql.Identifier(self.lines_table))
-        self.get_lines_query = sql.SQL(LINE_QUERY + " where flowdir in (1,3) union " + REV_LINE_QUERY + " where flowdir in (1,2)").format(
+        self.get_lines_query = sql.SQL(
+            LINE_QUERY + " where flowdir in (1,3) union " + REV_LINE_QUERY + " where flowdir in (1,2)").format(
             schema=sql.Identifier(self.schema),
             table=sql.Identifier(self.lines_table))
-        self.get_linecount_query = sql.SQL("select count(1) from {schema}.{table}").format(
+        self.get_linecount_query = sql.SQL(f"select count(1) from {self.schema}.{self.lines_table}").format(
             schema=sql.Identifier(self.schema),
             table=sql.Identifier(self.lines_table))
         self.get_node_query = sql.SQL(NODE_QUERY + " where id=%s").format(
@@ -331,10 +337,11 @@ class WebToolMapReader(MapReader):
         self.get_nodes_query = sql.SQL(NODE_QUERY).format(
             schema=sql.Identifier(self.schema),
             table=sql.Identifier(self.nodes_table))
-        self.get_nodecount_query = sql.SQL("select count(1) from {schema}.{table}").format(
+        self.get_nodecount_query = sql.SQL(f"select count(1) from {self.schema}.{self.lines_table}").format(
             schema=sql.Identifier(self.schema),
             table=sql.Identifier(self.nodes_table))
-        self.find_nodes_close_to_query = sql.SQL(NODE_QUERY + " where geom && st_buffer(ST_GeographyFromText('SRID=4326;POINT(%s %s)'), %s)::geometry").format(
+        self.find_nodes_close_to_query = sql.SQL(
+            NODE_QUERY + " where geom && st_buffer(ST_GeographyFromText('SRID=4326;POINT(%s %s)'), %s)::geometry").format(
             schema=sql.Identifier(self.schema),
             table=sql.Identifier(self.nodes_table))
         self.find_lines_close_to_query = sql.SQL(f"""
@@ -345,10 +352,12 @@ class WebToolMapReader(MapReader):
         """).format(
             schema=sql.Identifier(self.schema),
             table=sql.Identifier(self.lines_table))
-        self.outgoing_lines_query = sql.SQL(LINE_QUERY + " where from_int = %s and flowdir in (1,3) union " + REV_LINE_QUERY + " where to_int = %s and flowdir in (1,2)").format(
+        self.outgoing_lines_query = sql.SQL(
+            LINE_QUERY + " where from_int = %s and flowdir in (1,3) union " + REV_LINE_QUERY + " where to_int = %s and flowdir in (1,2)").format(
             table=sql.Identifier(self.lines_table),
             schema=sql.Identifier(self.schema))
-        self.incoming_lines_query = sql.SQL(LINE_QUERY + " where to_int = %s and flowdir in (1,3) union " + REV_LINE_QUERY + " where from_int = %s and flowdir in (1,2)").format(
+        self.incoming_lines_query = sql.SQL(
+            LINE_QUERY + " where to_int = %s and flowdir in (1,3) union " + REV_LINE_QUERY + " where from_int = %s and flowdir in (1,2)").format(
             table=sql.Identifier(self.lines_table),
             schema=sql.Identifier(self.schema))
 
@@ -390,7 +399,7 @@ class WebToolMapReader(MapReader):
         # Just verify that this line ID exists.
         l = self.line_cache.get(line_id)
         if l is not None:
-            return(l)
+            return (l)
         raise WebToolMapException(
             f"Line {line_id} should have been in the cache but was not found")
 
