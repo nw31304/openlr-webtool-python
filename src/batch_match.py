@@ -3,17 +3,21 @@
     write the results to a tab separated CSV file
 """
 
-import multiprocessing as mp
-from multiprocessing import Queue, cpu_count
-from openlr_dereferencer.decoding import Config, LineLocation, MapObjects, PointAlongLine, Coordinates
-from openlr import binary_decode, FRC
-from typing import Dict, List, Tuple, cast
-from webtool import WebToolMapReader, Line
-import timeit
 import logging
+import multiprocessing as mp
+import timeit
+from multiprocessing import Queue, cpu_count
+from typing import List, cast
+
+from decoder_configs import StrictConfig, RelaxedConfig
+from geotool_4326 import GeoTool_4326
+from openlr_dereferencer.decoding import LineLocation, MapObjects, PointAlongLine, Coordinates
+from webtool_sqlite import WebToolMapReaderSQLite, Line
+
+logging.basicConfig(level=logging.WARNING)
 
 # number of concurrent decoder worker processes
-WORKER_COUNT = cpu_count()
+WORKER_COUNT = cpu_count() - 1
 # name of PG table containing the lines in the network
 LINES_TABLE = "roads"
 # name of PG table containing the nodes in the network
@@ -37,58 +41,12 @@ FAILED_DECODING_MSG="__FAILED__"
 
 # File containing binary-encoded openlr codes to be matched.
 # One per line, lines terminated by line feeds
-CODES_FN = "/Users/dave/projects/python/openlr/data/texas_1000.openlrs"
+CODES_FN = "/Users/dave/projects/python/openlr/data/france.overture.openlrs"
 
 # Tab separated CSV to be created with decoding results. Fields are:
 # code \t points \t [meta, dir] \t n_off \t p_off
-OUTPUT_FN = "/Users/dave/projects/python/openlr/data/texas.decoded"
-
-# Decoding is first attempted using strict decoding paramters,
-# and then retried with more lenient ones if the first decoding
-# failed. This is the strict version of the LFRC -> FRC disctionary
-STRICT_TOLERATED_LFRC: Dict[FRC, FRC] = {
-    FRC.FRC0: FRC.FRC1,
-    FRC.FRC1: FRC.FRC2,
-    FRC.FRC2: FRC.FRC3,
-    FRC.FRC3: FRC.FRC4,
-    FRC.FRC4: FRC.FRC5,
-    FRC.FRC5: FRC.FRC6,
-    FRC.FRC6: FRC.FRC7,
-    FRC.FRC7: FRC.FRC7,
-}
-
-# The relaxed version of the LFRC -> FRC dictionary
-RELAXED_TOLERATED_LFRC: Dict[FRC, FRC] = {
-    FRC.FRC0: FRC.FRC1,
-    FRC.FRC1: FRC.FRC3,
-    FRC.FRC2: FRC.FRC3,
-    FRC.FRC3: FRC.FRC5,
-    FRC.FRC4: FRC.FRC5,
-    FRC.FRC5: FRC.FRC7,
-    FRC.FRC6: FRC.FRC7,
-    FRC.FRC7: FRC.FRC7,
-}
-
-# The strict configuration
-STRICT_CONFIG = Config(
-    tolerated_lfrc=STRICT_TOLERATED_LFRC,
-    max_bear_deviation=30,
-    search_radius=30,
-    geo_weight=0.66,
-    frc_weight=0.17,
-    fow_weight=0.17,
-    bear_weight=0.0
-)
-
-# The relaxed configuration
-RELAXED_CONFIG = Config(
-    tolerated_lfrc=RELAXED_TOLERATED_LFRC,
-    search_radius=50,
-    geo_weight=0.66,
-    frc_weight=0.17,
-    fow_weight=0.17,
-    bear_weight=0.0
-)
+#OUTPUT_FN = "/Users/dave/projects/python/openlr/data/france.decoded"
+OUTPUT_FN = "/dev/null"
 
 
 def load_queue(q):
@@ -104,7 +62,7 @@ def load_queue(q):
         q.put(POISON_PILL_MSG)
 
 
-def worker(q_in: Queue, q_out: Queue):
+def worker(id: int, q_in: Queue, q_out: Queue):
     """
         Each worker takes a record off the queue and attempts to decode it.  If it successful, it places a tuple
         containing the code as well as the decoded coordinates on the writer input queue.  If it is unsuccessful,
@@ -143,24 +101,36 @@ def worker(q_in: Queue, q_out: Queue):
                 0.0
             )
         else:
-            logging.warn(
-                "Unexpected map object type: {} returned from decode.  Only (LineLocations, PointALongLine, Coordinates) currently supported", type(result))
+            logging.warning(
+                "Unexpected map object type: {} returned from decode.  Only (LineLocations, PointALongLine, "
+                "Coordinates) currently supported", type(result))
             return
 
         q_out.put(data)
 
-    rdr = WebToolMapReader(
-        lines_table=LINES_TABLE,
-        nodes_table=NODES_TABLE,
-        user=USER,
-        password=PASSWORD,
-        dbname=DBNAME,
-        host=HOST,
-        schema=SCHEMA,
-        port=PORT,
-        config=STRICT_CONFIG
+    rdr = WebToolMapReaderSQLite(
+        db_filename="/Users/dave/projects/python/openlr/data/france.sqlite",
+        geo_tool=GeoTool_4326(),
+        #spatialite_target="/Users/dave/opt/anaconda3/envs/openlr-3.10/lib/mod_spatialite",
+        #spatialite_target="/opt/homebrew/anaconda3/envs/openlr/lib/mod_spatialite",
+        mod_spatialite="/usr/local/lib/mod_spatialite",
+        lines_table="roads",
+        nodes_table="intersections",
+        config=StrictConfig
     )
+    # rdr = WebToolMapReader(
+    #     lines_table=LINES_TABLE,
+    #     nodes_table=NODES_TABLE,
+    #     user=USER,
+    #     password=PASSWORD,
+    #     dbname=DBNAME,
+    #     host=HOST,
+    #     schema=SCHEMA,
+    #     port=PORT,
+    #     config=STRICT_CONFIG
+    # )
 
+    logging.info(f"Worker {id} initialized")
     code = q_in.get()
 
     while code != POISON_PILL_MSG:
@@ -169,12 +139,13 @@ def worker(q_in: Queue, q_out: Queue):
             enqueue(result)
         except:
             try:
-                result = rdr.match(code, config=RELAXED_CONFIG)
+                result = rdr.match(code, config=RelaxedConfig)
                 enqueue(result)
             except:
                 q_out.put((FAILED_DECODING_MSG, None, None, None, None))
         code = q_in.get()
     q_out.put((code, None, None, None, None))
+    logging.info(f"Worker {id} shutting down")
 
 
 def print_progress(successes, fails, start_time):
@@ -202,8 +173,8 @@ if __name__ == '__main__':
     start_time = timeit.default_timer()
 
     # spawn the workers
-    for _ in range(WORKER_COUNT):
-        p = ctx.Process(target=worker, args=(q_in, q_out))
+    for i in range(WORKER_COUNT):
+        p = ctx.Process(target=worker, args=(i, q_in, q_out))
         p.start()
         workers.append(p)
         active_workers += 1
@@ -218,6 +189,7 @@ if __name__ == '__main__':
             (code, coords, lines, p_off, n_off) = q_out.get()
             if code == POISON_PILL_MSG:
                 # Poison pill:  decrement the worker count
+                logging.info("Worker shutdown detected")
                 active_workers -= 1
             elif code != FAILED_DECODING_MSG:
                 # We have a valid geosjon object: write it to the output file

@@ -117,3 +117,20 @@ write the results to a tab separated CSV file.  See comments in the file for mor
     - folium >= 0.12.1
     - panel >= 0.12.6
     - ipywidgets >= 7.7.0
+
+## Mac silicon notes
+  // libspatialite v5.1.0 is here:
+  $ export DYLD_LIBRARY_PATH=/opt/homebrew/lib
+  $ ls -la /opt/homebrew/lib/mod_spatialite.dylib
+  lrwxr-xr-x  1 dave  admin  54 30 Sep 13:28 /opt/homebrew/lib/mod_spatialite.dylib -> ../Cellar/libspatialite/5.1.0/lib/mod_spatialite.dylib
+  
+  // and also here, built from source:
+  $ ls -la /usr/local/lib/mod_spatialite.dylib
+  lrwxr-xr-x  1 root  wheel  22  1 Oct 12:58 /usr/local/lib/mod_spatialite.dylib -> mod_spatialite.8.dylib
+
+  zsh ❯ /usr/local/bin/sqlite3 /Users/dave/projects/python/openlr/data/france.sqlite
+  SQLite version 3.40.0 2022-08-12 18:46:01
+  Enter ".help" for usage hints.
+  sqlite> .headers on
+  sqlite> .mode column
+  sqlite> SELECT load_extension('/usr/local/lib/mod_spatialite');

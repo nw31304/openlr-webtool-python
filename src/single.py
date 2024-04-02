@@ -1,19 +1,34 @@
-from webtool import WebToolMapReader
-from webtool_4326 import WebToolMapReader4326
-from openlr_dereferencer.decoding import LRDecodeError
+from decoder_configs import STRICT_CONFIG
+#from geotool_4326 import GeoTool_4326
+#from webtool_4326 import WebToolMapReader4326
+from tomtom_sqlite import TomTomMapReaderSQLite
 
-# rdr = WebToolMapReader(host="",dbname="openlr",schema="texas",lines_table="roads",nodes_table="intersections")
-rdr = WebToolMapReader4326(host="",dbname="openlr",schema="texas",lines_table="roads",nodes_table="intersections")
+# rdr = WebToolMapReader4326(
+#     host="127.0.0.1",
+#     geo_tool=GeoTool_4326(),
+#     port=5432,
+#     user="openlr",
+#     dbname="openlr_db",
+#     schema="local",
+#     lines_table="roads",
+#     nodes_table="intersections",
+#     config=STRICT_CONFIG
+# )
 
-# rdr.match("C7yNzxTT4AEYMvTiAH4BCg==")
-with open("/Users/dave/projects/python/openlr/data/texas_1000.openlrs") as in_file:
-    good = 0
-    bad = 0
-    for code in in_file.readlines():
-        try:
-            rdr.match(code)
-            good += 1
-        except LRDecodeError:
-            print(code)
-            bad += 1
-    print(f"{good=}; {bad=}")
+# rdr = WebToolMapReaderSQLite(
+#     db_filename="/Users/dave/projects/python/openlr/data/france.sqlite",
+#     mod_spatialite="/opt/homebrew/anaconda3/envs/openlr/lib/mod_spatialite",
+#     lines_table="roads",
+#     nodes_table="intersections",
+#     config=STRICT_CONFIG
+# )
+
+rdr = TomTomMapReaderSQLite(
+    db_filename="/Users/dave/projects/python/openlr/data/france.sqlite",
+    mod_spatialite="/opt/homebrew/anaconda3/envs/openlr/lib/mod_spatialite",
+    lines_table="roads",
+    nodes_table="intersections",
+    config=STRICT_CONFIG
+)
+res = rdr.match("CwF+qR/ptiOfD/0uAaUjEg==")
+print(res.lines)

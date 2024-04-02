@@ -19,12 +19,12 @@ Dependencies:
 from __future__ import annotations
 import psycopg2 as pg
 from psycopg2 import sql
-from typing import Iterable, Optional, cast
+from typing import Iterable, Optional, cast, Dict
 from openlr import Coordinates, FRC, FOW
 from openlr_dereferencer.maps import MapReader
+from openlr_dereferencer.maps.abstract import GeoTool
 from openlr_dereferencer import decode, Config
 from openlr_dereferencer.decoding import MapObjects, DEFAULT_CONFIG
-import param
 from itertools import chain
 from shapely.geometry import LineString, Point
 from shapely.ops import nearest_points
@@ -221,8 +221,7 @@ class Node(AbstractNode):
         return chain(self.incoming_lines(), self.outgoing_lines())
 
 
-@MapReader.register
-class WebToolMapReader(param.Parameterized):
+class WebToolMapReader(MapReader):
     """
     This is a reader for OpenLR webtool schema in a PostgreSQL DB.
     It is created by the reader() method on an instance of the enclosing 
@@ -293,26 +292,30 @@ class WebToolMapReader(param.Parameterized):
     >>> rdr.match("C2Br9xiypCOYCv1L/9kjBw==")
 
     """
-    # connection parameters
-    host = param.String(default="")
-    port = param.Integer(bounds=(1024, None), default=5432)
-    user = param.String(default="")
-    password = param.String(default="")
-    dbname = param.String(default="openlr")
 
-    # tables
-    schema = param.String(default="local")
-    lines_table = param.String(default="lines")
-    nodes_table = param.String(default="nodes")
+    def __init__(self, geo_tool : GeoTool, host: str, port: int = 5432, user: str = "", password: str = "", dbname: str = "openlr", schema: str = "local", lines_table: str = "roads",
+                 nodes_table: str = "intersections", config: Config = DEFAULT_CONFIG):
 
-    # default match config
-    config = param.ClassSelector(class_=Config, default=DEFAULT_CONFIG)
+        self.lines_table: str = lines_table
+        self.nodes_table: str = nodes_table
+        self.node_cache: Dict = {}
+        self.line_cache: Dict = {}
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        # connection parameters
+        self.host: str = host
+        self.port: int = port
+        self.user: str = user
+        self.password: str = password
+        self.dbname: str = dbname
 
-        self.node_cache = {}
-        self.line_cache = {}
+        # tables
+        self.schema: str = schema
+        self.lines_table: str = lines_table
+        self.nodes_table: str = nodes_table
+
+        # default match config
+        self.config: Config = config
+
         self.get_line_query = sql.SQL(LINE_QUERY + " where id=%s").format(
             schema=sql.Identifier(self.schema),
             table=sql.Identifier(self.lines_table))
