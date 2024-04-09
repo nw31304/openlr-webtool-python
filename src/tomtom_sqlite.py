@@ -17,6 +17,7 @@ Dependencies:
 
 from __future__ import annotations
 
+import logging
 from contextlib import closing
 from itertools import chain
 from math import sqrt
@@ -43,6 +44,28 @@ SQRT_2 = sqrt(2)
 
 class WebToolMapException(Exception):
     pass
+
+
+def are_peers(candidate: Line, source: Optional[Line]) -> bool:
+    """
+    Returns True if candidate and source are peer lines, i.e. they are
+    the same road, but in opposite directions.  This is determined
+    by the line_id of the lines.
+
+    Arguments:
+        candidate:Line
+            first line
+        source:Optional[Line]
+            second line
+
+    Returns:
+        bool
+            True if candidate and source are peer lines, False otherwise
+    """
+    if source is None:
+        return False
+    else:
+        return candidate.line_id == "-" + source.line_id or source.line_id == "-" + candidate.line_id
 
 
 class Line(AbstractLine):
@@ -75,10 +98,10 @@ class Line(AbstractLine):
             shapely LineString representing this line's geometry
     """
 
-    def __init__(self, map_reader: TomTomMapReaderSQLite, line_id: int, fow: FOW, frc: FRC, length: float,
+    def __init__(self, map_reader: TomTomMapReaderSQLite, line_id: str, fow: FOW, frc: FRC, length: float,
                  from_int: int | Node, to_int: int | Node, geometry: LineString):
-        self.id = line_id
-        self.map_reader = map_reader
+        self.id: str = line_id
+        self.map_reader: TomTomMapReaderSQLite = map_reader
         self._fow: FOW = fow
         self._frc: FRC = frc
         self._length: float = length
@@ -90,25 +113,24 @@ class Line(AbstractLine):
         return f"Line with id={self.line_id} of length {self.length}"
 
     @property
-    def line_id(self) -> int:
+    def line_id(self) -> str:
         """Returns the line id"""
         return self.id
 
     @property
     def start_node(self) -> "Node":
-        if type(self.from_int) == Node:
+        if isinstance(self.from_int, Node):
             return self.from_int  # type:ignore
         else:
-            self.from_int = self.map_reader.get_node(
-                self.from_int)  # type:ignore
+            self.from_int = self.map_reader.get_node(self.from_int)  # type:ignore
             return self.from_int
 
     @property
     def end_node(self) -> "Node":
-        if type(self.to_int) == Node:
+        if isinstance(self.to_int, Node):
             return cast(Node, self.to_int)
         else:
-            self.to_int = self.map_reader.get_node(cast(int, self.to_int))
+            self.to_int = self.map_reader.get_node(self.to_int)
             return self.to_int
 
     @property
@@ -165,53 +187,51 @@ class Node(AbstractNode):
     def coordinates(self) -> Coordinates:
         return Coordinates(lon=self.lon, lat=self.lat)
 
-    def outgoing_lines(self) -> Iterable[Line]:
+    def outgoing_lines(self, source: Optional[Line] = None) -> Iterable[Line]:
         if len(self.outgoing_lines_cache) > 0:
             for line in self.outgoing_lines_cache:
                 yield line
         else:
             with closing(self.map_reader.connection.cursor()) as cursor:
                 # start_time = time()
-                cursor.execute(self.map_reader.outgoing_lines_query,
-                               (self.node_id, self.node_id))
+                cursor.execute(self.map_reader.outgoing_lines_query, (self.node_id, self.node_id))
                 # end_time = time();
                 # print(f"Outgoing lines query: {end_time - start_time}")
                 for (line_id, fow, flowdir, frc, length, from_int, to_int, geom) in cursor:
                     line = self.map_reader.line_cache.get(line_id)
-                    if line is not None:
+                    if line is not None and not are_peers(line, source):
                         self.outgoing_lines_cache.append(line)
                         yield line
                     else:
                         ls = LineString(wkb.loads(geom, hex=False))
-                        line = Line(self.map_reader, line_id, FOW(
-                            fow), FRC(frc), length, self, to_int, ls)
+                        line = Line(self.map_reader, line_id, FOW(fow), FRC(frc), length, self, to_int, ls)
                         self.map_reader.line_cache[line_id] = line
-                        self.outgoing_lines_cache.append(line)
-                        yield line
+                        if not are_peers(line, source):
+                            self.outgoing_lines_cache.append(line)
+                            yield line
 
-    def incoming_lines(self) -> Iterable[Line]:
+    def incoming_lines(self, source: Optional[Line] = None) -> Iterable[Line]:
         if len(self.incoming_lines_cache) > 0:
             for line in self.incoming_lines_cache:
                 yield line
         else:
             with closing(self.map_reader.connection.cursor()) as cursor:
                 # start_time = time()
-                cursor.execute(self.map_reader.incoming_lines_query,
-                               (self.node_id, self.node_id))
+                cursor.execute(self.map_reader.incoming_lines_query, (self.node_id, self.node_id))
                 # end_time = time();
                 # print(f"Incoming lines query: {end_time - start_time}")
                 for (line_id, fow, flowdir, frc, length, from_int, to_int, geom) in cursor:
-                    l = self.map_reader.line_cache.get(line_id)
-                    if l is not None:
-                        self.incoming_lines_cache.append(l)
-                        yield l
+                    line = self.map_reader.line_cache.get(line_id)
+                    if line is not None and not are_peers(line, source):
+                        self.incoming_lines_cache.append(line)
+                        yield line
                     else:
                         ls = LineString(wkb.loads(geom, hex=False))
-                        l = Line(self.map_reader, line_id, FOW(
-                            fow), FRC(frc), length, from_int, self, ls)
-                        self.map_reader.line_cache[line_id] = l
-                        self.incoming_lines_cache.append(l)
-                        yield l
+                        line = Line(self.map_reader, line_id, FOW(fow), FRC(frc), length, from_int, self, ls)
+                        self.map_reader.line_cache[line_id] = line
+                        if line is not None and not are_peers(line, source):
+                            self.incoming_lines_cache.append(line)
+                            yield line
 
     def connected_lines(self) -> Iterable[Line]:
         return chain(self.incoming_lines(), self.outgoing_lines())
@@ -279,8 +299,7 @@ class TomTomMapReaderSQLite(MapReader):
     """
 
     def __init__(self, db_filename: str, geo_tool: GeoTool, mod_spatialite: str = "mod_spatialite",
-                 lines_table: str = "line",
-                 nodes_table: str = "nodes", config: Config = DEFAULT_CONFIG):
+                 lines_table: str = "line", nodes_table: str = "nodes", config: Config = DEFAULT_CONFIG):
 
         self.db_filename = db_filename
         self.geo_tool = geo_tool
@@ -330,7 +349,7 @@ class TomTomMapReaderSQLite(MapReader):
         self.connection.enable_load_extension(True)
         _ = self.connection.execute(f"""select load_extension("{self.mod_spatialite}")""").fetchall()
 
-    def match(self, binstr: str, clear_cache: bool = True, config: Optional[Config] = None) -> MapObjects:
+    def match(self, binstr: str, clear_cache: bool = True, config: Optional[Config] = None) -> Optional[MapObjects]:
         """
         Decode an OpenLR binary string
 
@@ -359,16 +378,20 @@ class TomTomMapReaderSQLite(MapReader):
         if clear_cache:
             self.node_cache.clear()
             self.line_cache.clear()
-        return cast(MapObjects, decode(reference=ref, reader=cast(MapReader, self), config=cast(Config, config),
-                                       geo_tool=self.geo_tool))
+        try:
+            return cast(MapObjects,
+                        decode(reference=ref, reader=cast(MapReader, self), config=cast(Config, config),
+                               geo_tool=self.geo_tool))
+        except Exception as e:
+            logging.info(f"Error during decode of {ref}: {e}")
+            return None
 
     def get_line(self, line_id: str) -> Line:
         # Just verify that this line ID exists.
         line = self.line_cache.get(line_id)
         if line is not None:
             return line
-        raise WebToolMapException(
-            f"Line {line_id} should have been in the cache but was not found")
+        raise WebToolMapException(f"Line {line_id} should have been in the cache but was not found")
 
     def get_lines(self) -> Iterable[Line]:
         with closing(self.connection.cursor()) as cursor:
@@ -382,8 +405,7 @@ class TomTomMapReaderSQLite(MapReader):
                     yield line
                 else:
                     ls = LineString(wkb.loads(geom, hex=False))
-                    line = Line(self, line_id, FOW(fow), FRC(
-                        frc), length, from_int, to_int, ls)
+                    line = Line(self, line_id, FOW(fow), FRC(frc), length, from_int, to_int, ls)
                     self.line_cache[line_id] = line
                     yield line
 
@@ -395,8 +417,7 @@ class TomTomMapReaderSQLite(MapReader):
             # print(f"Get linecount query: {end_time - start_time}")
             res = cursor.fetchone()
             if res is None:
-                raise WebToolMapException(
-                    "Error retrieving line count from datastore")
+                raise WebToolMapException("Error retrieving line count from datastore")
             (count,) = res
             return count
 
@@ -411,8 +432,7 @@ class TomTomMapReaderSQLite(MapReader):
             # print(f"Get node query: {end_time - start_time}")
             res = cursor.fetchone()
             if res is None:
-                raise WebToolMapException(
-                    f"Error retrieving node {node_id} from datastore")
+                raise WebToolMapException(f"Error retrieving node {node_id} from datastore")
             (node_id, lon, lat) = res
             n = Node(self, node_id, lon, lat)
             self.node_cache[node_id] = n
@@ -441,8 +461,7 @@ class TomTomMapReaderSQLite(MapReader):
             # print(f"Get nodecount query: {end_time - start_time}")
             res = cursor.fetchone()
             if res is None:
-                raise WebToolMapException(
-                    f"Error retrieving node count from datastore")
+                raise WebToolMapException(f"Error retrieving node count from datastore")
             (count,) = res
             return count
 
