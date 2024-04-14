@@ -42,34 +42,35 @@ The PostgreSQL / PostGIS DB must contain tables representing lines (road segment
 - `from_int` and `to_int` are foreign key references to the `id` column of the `nodes` table 
 
 ## Sample usage:
+
 ```python
 from openlr import FRC, FOW
-from webtool import WebToolMapReader
+from map_databases.webtool import WebToolMapReader
 from typing import Dict
 from openlr_dereferencer import Config
 
-my_tolerated_lfrc: Dict[ FRC, FRC ] = {
-    FRC.FRC0 : FRC.FRC1,
-    FRC.FRC1 : FRC.FRC2,
-    FRC.FRC2 : FRC.FRC3,
-    FRC.FRC3 : FRC.FRC4,
-    FRC.FRC4 : FRC.FRC5,
-    FRC.FRC5 : FRC.FRC6,
-    FRC.FRC6 : FRC.FRC7,
-    FRC.FRC7 : FRC.FRC7,
+my_tolerated_lfrc: Dict[FRC, FRC] = {
+    FRC.FRC0: FRC.FRC1,
+    FRC.FRC1: FRC.FRC2,
+    FRC.FRC2: FRC.FRC3,
+    FRC.FRC3: FRC.FRC4,
+    FRC.FRC4: FRC.FRC5,
+    FRC.FRC5: FRC.FRC6,
+    FRC.FRC6: FRC.FRC7,
+    FRC.FRC7: FRC.FRC7,
 }
 
 my_config = Config(
-    tolerated_lfrc = my_tolerated_lfrc,
-    max_bear_deviation = 30,
+    tolerated_lfrc=my_tolerated_lfrc,
+    max_bear_deviation=30,
     search_radius=30,
-    geo_weight = 0.66,
-    frc_weight = 0.17,
-    fow_weight = 0.17,
-    bear_weight = 0.0
+    geo_weight=0.66,
+    frc_weight=0.17,
+    fow_weight=0.17,
+    bear_weight=0.0
 )
-   
-  rdr = WebToolMapReader(
+
+rdr = WebToolMapReader(
     host="",
     port=5432,
     user="",
@@ -79,25 +80,25 @@ my_config = Config(
     lines_table="roads",
     nodes_table="intersections",
     config=my_config
-  )
+)
 
-res=rdr.match("C7yP6xTT6QEWE/t6/+0BCA==")
-    # Out[11]: <openlr_dereferencer.decoding.line_location.LineLocation at 0x7fae582721c0>
+res = rdr.match("C7yP6xTT6QEWE/t6/+0BCA==")
+# Out[11]: <openlr_dereferencer.decoding.line_location.LineLocation at 0x7fae582721c0>
 res.lines
-    #Out[14]:
-    #[Line with id=3736240 of length 14.658514187337138,
-    # Line with id=2487940 of length 271.09294979343383,
-    # Line with id=1531179 of length 114.98001126157855,
-    # Line with id=2564465 of length 762.4772421777637]
+# Out[14]:
+# [Line with id=3736240 of length 14.658514187337138,
+# Line with id=2487940 of length 271.09294979343383,
+# Line with id=1531179 of length 114.98001126157855,
+# Line with id=2564465 of length 762.4772421777637]
 
 len(res.coordinates())
-    # Out[16]: 22
+# Out[16]: 22
 
 res.n_off
-    #Out[20]: 45.791227508416654
+# Out[20]: 45.791227508416654
 
 res.p_off
-    # Out[21]: 0.0
+# Out[21]: 0.0
 
 ```
 

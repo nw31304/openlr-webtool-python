@@ -23,7 +23,7 @@ from openlr import Coordinates, LocationReferencePoint
 from openlr import binary_decode
 from psycopg2 import sql
 
-from geotool_3857 import GeoTool_3857
+from geotools.geotool_3857 import GeoTool_3857
 from openlr_dereferencer_python.openlr_dereferencer import decode, Config
 from openlr_dereferencer_python.openlr_dereferencer.decoding import MapObjects
 from openlr_dereferencer_python.openlr_dereferencer.maps import MapReader

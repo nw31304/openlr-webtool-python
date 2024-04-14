@@ -1,9 +1,7 @@
-from geotool_4326 import GeoTool_4326
-from openlr import Coordinates
+from geotools import GeoTool_4326
 from pytest import approx
-from shapely.geometry import LineString
 from shapely import wkt
-from math import pi, sqrt, degrees, radians
+from math import degrees, radians
 
 gt = GeoTool_4326()
 wkt1 = "LINESTRING(-95.5243893 29.8085368,-95.5243909 29.8088737)"

@@ -10,8 +10,8 @@ from shapely import wkb, LineString
 from decoder_configs import StrictConfig, AnyPath
 from decoding_analysis_tool.analysis_result import AnalysisResult
 from decoding_analysis_tool.main import DecodingAnalysisTool
-from geotool_4326 import GeoTool_4326
-from tomtom_sqlite import TomTomMapReaderSQLite
+from geotools.geotool_4326 import GeoTool_4326
+from map_databases.tomtom_sqlite import TomTomMapReaderSQLite
 
 
 class MyTestCase(unittest.TestCase):
@@ -106,6 +106,7 @@ class MyTestCase(unittest.TestCase):
         ls = self.test_data[olr]
         res = DecodingAnalysisTool(map_reader=rdr, buffer_radius=20).analyze(olr, ls)
         print(res)
+
     def test_decode_weird(self):
         # set logging level to DEBUG
         logging.basicConfig(level=logging.DEBUG)
@@ -117,7 +118,7 @@ class MyTestCase(unittest.TestCase):
             geo_tool=GeoTool_4326(),
             config=StrictConfig
         )
-        olr = "C8k32huq2CKVB/5Y/2EjCA=="
+        olr = "C8kiHxukmRp8HPo0A6gbCw=="
         assert (olr in self.test_data)
         ls = self.test_data[olr]
         res = DecodingAnalysisTool(map_reader=rdr, buffer_radius=20).analyze(olr, ls)
@@ -139,15 +140,23 @@ class MyTestCase(unittest.TestCase):
             config=StrictConfig
         )
         dat = DecodingAnalysisTool(map_reader=rdr, buffer_radius=20)
+        count: int = 0
+        cumulative_frac: float = 0.0
         for olr, ls in self.test_data.items():
-            res = dat.analyze(olr, ls)
+            res, frac = dat.analyze(olr, ls)
             if res not in results:
                 results[res] = set()
             results[res].add(olr)
+            cumulative_frac += frac
+            count += 1
 
         for k, v in results.items():
             print(k, len(v))
-        for olr in results[AnalysisResult.INCORRECT_FIRST_OR_LAST_LRP_PLACEMENT]:
+        print(f"average location fraction within buffer: {100.0 * cumulative_frac / count: .02f}%")
+        print(f"accuracy: {100.0 * len(results[AnalysisResult.OK]) / count: .02f}%")
+
+        #for olr in results[AnalysisResult.INCORRECT_FIRST_OR_LAST_LRP_PLACEMENT]:
+        for olr in results[AnalysisResult.MISSING_OR_MISCONFIGURED_ROAD]:
             print(olr)
 
     def test_profile_bulk(self):
@@ -175,6 +184,7 @@ class MyTestCase(unittest.TestCase):
                 print(k, len(v))
 
             (pstats.Stats(profile).strip_dirs().sort_stats(pstats.SortKey.CUMULATIVE).print_stats())
+
 
 if __name__ == '__main__':
     unittest.main()

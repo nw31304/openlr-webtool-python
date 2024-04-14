@@ -35,7 +35,7 @@ from openlr_dereferencer_python.openlr_dereferencer import decode, Config
 from openlr_dereferencer_python.openlr_dereferencer.decoding import MapObjects, DEFAULT_CONFIG
 from openlr_dereferencer_python.openlr_dereferencer.maps import Line as AbstractLine, Node as AbstractNode
 from openlr_dereferencer_python.openlr_dereferencer.maps import MapReader
-from tomtom_sqlite import TomTomMapReaderSQLite
+from map_databases.tomtom_sqlite import TomTomMapReaderSQLite
 
 GEOD = Geod(ellps="WGS84")
 SQRT_2 = sqrt(2)
@@ -265,7 +265,9 @@ class BufferReader(MapReader):
         raise WebToolMapException(f"Line {line_id} should have been in the cache but was not found")
 
     def get_lines(self) -> Iterable[Line]:
-        pass
+        logging.warning("Unimplemented function get_lines() invoked in buffer_reader")
+        return []
+        
 
     def get_linecount(self) -> int:
         return len(self.lines)
@@ -277,7 +279,8 @@ class BufferReader(MapReader):
         raise WebToolMapException(f"Line {node_id} should have been in the cache but was not found")
 
     def get_nodes(self) -> Iterable[Node]:
-        pass
+        logging.warning("Unimplemented function get_lines() invoked in buffer_reader")
+        return []
 
     def get_nodecount(self) -> int:
         return len(self.nodes)

@@ -18,7 +18,7 @@ Dependencies:
 from __future__ import annotations
 from typing import Optional, cast
 from openlr import binary_decode
-from geotool_4326 import GeoTool_4326
+from geotools.geotool_4326 import GeoTool_4326
 from openlr_dereferencer_python.openlr_dereferencer import decode, Config
 from openlr_dereferencer_python.openlr_dereferencer.decoding import MapObjects
 from openlr_dereferencer_python.openlr_dereferencer.maps import MapReader

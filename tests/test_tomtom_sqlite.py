@@ -1,10 +1,9 @@
 
 from decoder_configs import StrictConfig, RelaxedConfig
-from tomtom_sqlite import TomTomMapReaderSQLite
-from geotool_4326 import GeoTool_4326
+from map_databases.tomtom_sqlite import TomTomMapReaderSQLite
+from geotools import GeoTool_4326
 from openlr import Coordinates
 import unittest
-import logging
 
 
 class TomTomSqliteTests(unittest.TestCase):

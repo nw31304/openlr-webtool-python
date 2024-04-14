@@ -1,6 +1,6 @@
-from geotool_3857 import GeoTool_3857
+from geotools import GeoTool_3857
 from openlr import Coordinates
-from pytest import approx, raises
+from pytest import approx
 from shapely.geometry import LineString
 from math import pi, sqrt, degrees
 

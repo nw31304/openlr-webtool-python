@@ -1,7 +1,7 @@
 from decoder_configs import STRICT_CONFIG
 #from geotool_4326 import GeoTool_4326
 #from webtool_4326 import WebToolMapReader4326
-from tomtom_sqlite import TomTomMapReaderSQLite
+from map_databases.tomtom_sqlite import TomTomMapReaderSQLite
 
 # rdr = WebToolMapReader4326(
 #     host="127.0.0.1",

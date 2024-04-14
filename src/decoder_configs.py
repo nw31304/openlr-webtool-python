@@ -19,6 +19,17 @@ STRICT_FOW_STAND_IN_SCORE = [
     [0.50, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 1.0],  # 7 = Other FOW
 ]
 
+RELAXED_FOW_STAND_IN_SCORE = [
+    [1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00],  # 0 = Undefined FOW
+    [1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00],  # 1 = Motorway
+    [1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00],  # 2 = Multiple carriage way
+    [1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00],  # 3 = Single carriage way
+    [1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00],  # 4 = Roundabout
+    [1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00],  # 5 = Traffic square
+    [1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00],  # 6 = Sliproad
+    [1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00],  # 7 = Other FOW
+]
+
 # Decoding is first attempted using strict decoding parameters,
 # and then retried with more lenient ones if the first decoding
 # failed. This is the strict version of the LFRC -> FRC disctionary.
@@ -38,11 +49,11 @@ STRICT_TOLERATED_LFRC: Dict[FRC, FRC] = {FRC.FRC0: FRC.FRC1,
 
 # The relaxed version of the LFRC -> FRC dictionary
 RELAXED_TOLERATED_LFRC: Dict[FRC, FRC] = {
-    FRC.FRC0: FRC.FRC1,
-    FRC.FRC1: FRC.FRC3,
-    FRC.FRC2: FRC.FRC3,
-    FRC.FRC3: FRC.FRC5,
-    FRC.FRC4: FRC.FRC5,
+    FRC.FRC0: FRC.FRC7,
+    FRC.FRC1: FRC.FRC7,
+    FRC.FRC2: FRC.FRC7,
+    FRC.FRC3: FRC.FRC7,
+    FRC.FRC4: FRC.FRC7,
     FRC.FRC5: FRC.FRC7,
     FRC.FRC6: FRC.FRC7,
     FRC.FRC7: FRC.FRC7,
@@ -104,7 +115,7 @@ AnyPath = Config(
     candidate_threshold=0,
     max_dnp_deviation=0.2,
     tolerated_dnp_dev=30,
-    tolerated_lfrc=STRICT_TOLERATED_LFRC,
+    tolerated_lfrc=RELAXED_TOLERATED_LFRC,
     max_bear_deviation=180,
     search_radius=20,
     geo_weight=1.0,
@@ -119,7 +130,7 @@ IgnoreFRC = Config(
     candidate_threshold=0,
     max_dnp_deviation=0.2,
     tolerated_dnp_dev=30,
-    tolerated_lfrc=STRICT_TOLERATED_LFRC,
+    tolerated_lfrc=RELAXED_TOLERATED_LFRC,
     max_bear_deviation=30,
     search_radius=20,
     geo_weight=0.33,
@@ -156,7 +167,7 @@ IgnoreFOW = Config(
     frc_weight=0.33,
     fow_weight=0,
     bear_weight=0.33,
-    fow_standin_score=STRICT_FOW_STAND_IN_SCORE
+    fow_standin_score=RELAXED_FOW_STAND_IN_SCORE
 )
 
 IgnorePathLength = Config(

@@ -22,7 +22,7 @@ from contextlib import closing
 from itertools import chain
 from math import sqrt
 from sqlite3 import connect
-from typing import Iterable, Optional, Dict, cast
+from typing import Iterable, Optional, cast, Dict
 
 # import param
 from openlr import Coordinates, FOW
@@ -99,7 +99,7 @@ class Line(AbstractLine):
     """
 
     def __init__(self, map_reader: TomTomMapReaderSQLite, line_id: str, fow: FOW, frc: FRC, length: float,
-                 from_int: int | Node, to_int: int | Node, geometry: LineString):
+                 from_int: str | Node, to_int: str | Node, geometry: LineString):
         self.id: str = line_id
         self.map_reader: TomTomMapReaderSQLite = map_reader
         self._fow: FOW = fow
@@ -171,7 +171,7 @@ class Node(AbstractNode):
             WGS84 latitude of this node's point
     """
 
-    def __init__(self, map_reader: TomTomMapReaderSQLite, node_id: int, lon: float, lat: float):
+    def __init__(self, map_reader: TomTomMapReaderSQLite, node_id: str, lon: float, lat: float):
         self.lon = lon
         self.lat = lat
         self.map_reader = map_reader
@@ -461,7 +461,7 @@ class TomTomMapReaderSQLite(MapReader):
             # print(f"Get nodecount query: {end_time - start_time}")
             res = cursor.fetchone()
             if res is None:
-                raise WebToolMapException(f"Error retrieving node count from datastore")
+                raise WebToolMapException("Error retrieving node count from datastore")
             (count,) = res
             return count
 

@@ -1,15 +1,15 @@
 import logging
-from typing import Optional
+from typing import Tuple
 
 from openlr import LineLocationReference, LocationReferencePoint, binary_decode
-from shapely import LineString, Point, Polygon
+from shapely import LineString, Point, Polygon, intersection
 
 import geoutils.geoutils
 from decoder_configs import StrictConfig, AnyPath, IgnoreFRC, IgnoreFOW, IgnorePathLength, IgnoreBearing
 from geoutils.geoutils import buffer_wgs84_geometry, split_line, GeoCoordinates
 from openlr_dereferencer_python.openlr_dereferencer.decoding import MapObjects
 from openlr_dereferencer_python.openlr_dereferencer.decoding.line_decoding import LineLocation
-from tomtom_sqlite import TomTomMapReaderSQLite
+from map_databases.tomtom_sqlite import TomTomMapReaderSQLite
 from .analysis_result import AnalysisResult
 from .buffer_reader import BufferReader
 
@@ -40,32 +40,29 @@ class DecodingAnalysisTool:
             back = front
         return back
 
-    def analyze(self, olr: str, ls: LineString) -> AnalysisResult:
+    def analyze(self, olr: str, ls: LineString) -> Tuple[AnalysisResult, float]:
         """Analyze a location reference against a map"""
-
+        percentage_within_buffer : float = 0.0
         decode_result: MapObjects = self.map_reader.match(olr)
         if decode_result is not None:
             if isinstance(decode_result, LineLocation):
                 buffered_ls: Polygon = buffer_wgs84_geometry(ls, Point(ls.coords[0]), self.buffer_radius)
-                if buffered_ls.contains(self.build_decoded_ls(decode_result)):
-                    return AnalysisResult.OK
+                decoded_ls: LineString = self.build_decoded_ls(decode_result)
+                if buffered_ls.contains(decoded_ls):
+                    return AnalysisResult.OK, 1.0
                 else:
                     # build a buffer around the source linestring
+                    percentage_within_buffer = intersection(buffered_ls, decoded_ls).length / decoded_ls.length
                     loc_ref = self.adjust_locref(olr, ls)
-                    decoded_ls = self.build_decoded_ls(decode_result)
                     buffer_map_reader = BufferReader(buffer=buffered_ls, loc_ref=loc_ref,
                                                      tomtom_map_reader=self.map_reader,
                                                      lrp_radius=self.buffer_radius)
-                    return self.analyze_within_buffer(buffer_map_reader, decoded_ls, olr, buffered_ls)
+                    return self.analyze_within_buffer(buffer_map_reader, decoded_ls, olr, buffered_ls), percentage_within_buffer
             else:
-                return AnalysisResult.UNSUPPORTED_LOCATION_TYPE
+                return AnalysisResult.UNSUPPORTED_LOCATION_TYPE, 0.0
         else:
-            loc_ref = self.adjust_locref(olr, ls)
             buffered_ls: Polygon = buffer_wgs84_geometry(ls, Point(ls.coords[0]), self.buffer_radius)
-            buffer_map_reader = BufferReader(buffer=buffered_ls, loc_ref=loc_ref,
-                                             tomtom_map_reader=self.map_reader,
-                                             lrp_radius=self.buffer_radius)
-            return self.determine_failure_cause(buffer_map_reader)
+            return self.determine_unrestricted_decoding_failure_cause(olr, buffered_ls), 0.0
 
     @staticmethod
     def adjust_locref(olr: str, ls: LineString) -> LineLocationReference:
@@ -121,11 +118,11 @@ class DecodingAnalysisTool:
                     decoded_ls):
                 return AnalysisResult.ALTERNATE_SHORTEST_PATH
             else:
-                return self.analyze_buffer_mismatch(olr, buffered_ls)
+                return self.determine_unrestricted_decoding_failure_cause(olr, buffered_ls)
         else:
-            return self.determine_failure_cause(buffer_map_reader)
+            return self.determine_restricted_decoding_failure_cause(buffer_map_reader)
 
-    def determine_failure_cause(self, buffer_map_reader: BufferReader) -> AnalysisResult:
+    def determine_restricted_decoding_failure_cause(self, buffer_map_reader: BufferReader) -> AnalysisResult:
         # We're here because we couldn't find a path in the restricted target map, but
         #
 
@@ -139,9 +136,9 @@ class DecodingAnalysisTool:
             return AnalysisResult.PATH_LENGTH_MISMATCH
         if buffer_map_reader.match(IgnoreBearing):
             return AnalysisResult.BEARING_MISMATCH
-        return AnalysisResult.INCONCLUSIVE
+        return AnalysisResult.INCORRECT_FIRST_OR_LAST_LRP_PLACEMENT
 
-    def analyze_buffer_mismatch(self, olr: str, buffered_ls: Polygon):
+    def determine_unrestricted_decoding_failure_cause(self, olr: str, buffered_ls: Polygon):
         # We're here because the location we decoded against the unrestricted target map
         # does not fit within the source map decoding's buffer.  However, we were able
         # to find a location completely in the restricted target map that is shorter than the unrestricted

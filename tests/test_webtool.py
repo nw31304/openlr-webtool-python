@@ -1,4 +1,4 @@
-from webtool import WebToolMapReader
+from map_databases.webtool import WebToolMapReader
 from openlr import Coordinates
 from pytest import approx, raises
 from openlr_dereferencer.decoding import LineLocation, Config
