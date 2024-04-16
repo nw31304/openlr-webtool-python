@@ -209,10 +209,9 @@ class BufferReader(MapReader):
             ls = LineString(wkb.loads(geom, hex=False))
             line = Line(map_reader=self, line_id=line_id, from_int=str(start), to_int=str(end), fow=FOW(fow),
                         frc=FRC(frc), length=length, geometry=ls, buffer=self.buffer)
-            if flowdir in [1, 2]:
-                self.lines[line.id] = line
-                self.all_lines.add(line)
-            if flowdir in [1, 3]:
+            self.lines[line.id] = line
+            self.all_lines.add(line)
+            if flowdir == 1:
                 rev_line = Line(map_reader=self, line_id="-" + line_id, from_int=str(end), to_int=str(start),
                                 fow=FOW(fow), frc=FRC(frc), length=length, geometry=ls.reverse(), buffer=self.buffer)
                 self.lines[rev_line.id] = rev_line

@@ -316,7 +316,7 @@ class TomTomMapReaderSQLite(MapReader):
         self.rev_line_query = self.rev_line_query_select + f" from {self.lines_table}"
         self.node_query = self.node_query_select + f" from {self.nodes_table}"
         self.get_line_query = self.line_query + " where id=?"
-        self.get_lines_query = self.line_query + " where direction in (1,2) union " + self.rev_line_query + " where direction in (1,3)"
+        self.get_lines_query = self.line_query + " union " + self.rev_line_query + " where direction = 1"
         self.get_linecount_query = f"select count(1) from {self.lines_table}"
         self.get_node_query = self.node_query + " where id=?"
         self.get_nodes_query = self.node_query
@@ -338,12 +338,12 @@ class TomTomMapReaderSQLite(MapReader):
                 and
                     distance(r.geom,(select p from tgt),1) <= ?
             )
-        {self.line_query_select} from candidates c where c.direction in (1,2)
+        {self.line_query_select} from candidates c
         union 
-        {self.rev_line_query_select} from candidates c where c.direction in (1,3)
+        {self.rev_line_query_select} from candidates c where c.direction = 1
         """
-        self.outgoing_lines_query = self.line_query + " where from_int = ? and direction in (1,2) union " + self.rev_line_query + " where from_int = ? and direction in (1,3)"
-        self.incoming_lines_query = self.line_query + " where to_int = ? and direction in (1,2) union " + self.rev_line_query + " where to_int = ? and direction in (1,3)"
+        self.outgoing_lines_query = self.line_query + " where from_int = ? union " + self.rev_line_query + " where from_int = ? and direction = 1"
+        self.incoming_lines_query = self.line_query + " where to_int = ? union " + self.rev_line_query + " where to_int = ? and direction = 1"
 
         self.connection = connect(f"file:{self.db_filename}?mode=ro", uri=True)
         self.connection.enable_load_extension(True)
