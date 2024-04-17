@@ -29,7 +29,7 @@ from openlr import Coordinates, FOW
 from openlr import binary_decode, FRC
 from pyproj import Geod
 from shapely import wkb
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString, Point, Polygon
 from shapely.ops import nearest_points
 
 from openlr_dereferencer_python.openlr_dereferencer import decode, Config
@@ -237,7 +237,7 @@ class Node(AbstractNode):
         return chain(self.incoming_lines(), self.outgoing_lines())
 
 
-# @MapReader.register
+
 class TomTomMapReaderSQLite(MapReader):
     """
     This is a reader for OpenLR webtool schema in a SQLite DB.
@@ -348,6 +348,12 @@ class TomTomMapReaderSQLite(MapReader):
         self.connection = connect(f"file:{self.db_filename}?mode=ro", uri=True)
         self.connection.enable_load_extension(True)
         _ = self.connection.execute(f"""select load_extension("{self.mod_spatialite}")""").fetchall()
+
+    def get_map_bounds(self) -> Polygon:
+        with closing(self.connection.cursor()) as cursor:
+            cursor.execute(f"select st_asbinary(extent(geom)) from {self.lines_table}")
+            (bounds,) = cursor.fetchone()
+            return wkb.loads(bounds, hex=False)
 
     def match(self, binstr: str, clear_cache: bool = True, config: Optional[Config] = None) -> Optional[MapObjects]:
         """

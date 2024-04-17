@@ -7,9 +7,9 @@ from shapely import LineString, Point, Polygon, intersection
 import geoutils.geoutils
 from decoder_configs import StrictConfig, AnyPath, IgnoreFRC, IgnoreFOW, IgnorePathLength, IgnoreBearing
 from geoutils.geoutils import buffer_wgs84_geometry, split_line, GeoCoordinates
+from map_databases.tomtom_sqlite import TomTomMapReaderSQLite
 from openlr_dereferencer_python.openlr_dereferencer.decoding import MapObjects
 from openlr_dereferencer_python.openlr_dereferencer.decoding.line_decoding import LineLocation
-from map_databases.tomtom_sqlite import TomTomMapReaderSQLite
 from .analysis_result import AnalysisResult
 from .buffer_reader import BufferReader
 
@@ -21,6 +21,7 @@ class DecodingAnalysisTool:
         self.buffer_radius = buffer_radius
         self.lrp_radius = lrp_radius
         self.logger = logging.getLogger(__name__)  # self.logger.setLevel(logging.DEBUG)
+        self.map_bounds: Polygon = self.map_reader.get_map_bounds()
 
     @staticmethod
     def build_decoded_ls(decode_result: LineLocation) -> LineString:
@@ -42,7 +43,9 @@ class DecodingAnalysisTool:
 
     def analyze(self, olr: str, ls: LineString) -> Tuple[AnalysisResult, float]:
         """Analyze a location reference against a map"""
-        percentage_within_buffer : float = 0.0
+        if not self.map_bounds.contains(ls):
+            return AnalysisResult.OUTSIDE_MAP_BOUNDS, 0.0
+
         decode_result: MapObjects = self.map_reader.match(olr)
         if decode_result is not None:
             if isinstance(decode_result, LineLocation):
@@ -55,9 +58,9 @@ class DecodingAnalysisTool:
                     percentage_within_buffer = intersection(buffered_ls, decoded_ls).length / decoded_ls.length
                     loc_ref = self.adjust_locref(olr, ls)
                     buffer_map_reader = BufferReader(buffer=buffered_ls, loc_ref=loc_ref,
-                                                     tomtom_map_reader=self.map_reader,
-                                                     lrp_radius=self.buffer_radius)
-                    return self.analyze_within_buffer(buffer_map_reader, decoded_ls, olr, buffered_ls), percentage_within_buffer
+                                                     tomtom_map_reader=self.map_reader, lrp_radius=self.buffer_radius)
+                    return self.analyze_within_buffer(buffer_map_reader, decoded_ls, olr,
+                                                      buffered_ls), percentage_within_buffer
             else:
                 return AnalysisResult.UNSUPPORTED_LOCATION_TYPE, 0.0
         else:
@@ -107,7 +110,8 @@ class DecodingAnalysisTool:
 
         return LineLocationReference(points=lrps, poffs=0, noffs=0)
 
-    def analyze_within_buffer(self, buffer_map_reader: BufferReader, decoded_ls: LineString, olr: str, buffered_ls: Polygon) -> AnalysisResult:
+    def analyze_within_buffer(self, buffer_map_reader: BufferReader, decoded_ls: LineString, olr: str,
+                              buffered_ls: Polygon) -> AnalysisResult:
         # We were able to decode in the unrestricted map, but the location didn't fit within the
         # buffer.  See if a valid path even exists in the restricted buffer and if so, compare
         # the lengths of the two paths.

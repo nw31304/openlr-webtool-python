@@ -144,6 +144,9 @@ class MyTestCase(unittest.TestCase):
         cumulative_frac: float = 0.0
         for olr, ls in self.test_data.items():
             res, frac = dat.analyze(olr, ls)
+            if res == AnalysisResult.OUTSIDE_MAP_BOUNDS:
+                print(f"ignoring location reference {olr} is outside the map bounds")
+                continue
             if res not in results:
                 results[res] = set()
             results[res].add(olr)
