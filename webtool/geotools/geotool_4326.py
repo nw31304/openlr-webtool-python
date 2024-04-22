@@ -4,7 +4,7 @@ from typing import Sequence, Tuple, Optional
 from openlr import Coordinates
 from shapely.geometry import LineString
 from itertools import tee, accumulate
-from openlr_dereferencer_python.openlr_dereferencer.maps.abstract import GeoTool
+from openlr_dereferencer.maps.abstract import GeoTool
 from pyproj import Geod
 
 

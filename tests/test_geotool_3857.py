@@ -1,4 +1,4 @@
-from geotools import GeoTool_3857
+from webtool.geotools import GeoTool_3857
 from openlr import Coordinates
 from pytest import approx
 from shapely.geometry import LineString

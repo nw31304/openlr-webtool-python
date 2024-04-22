@@ -11,7 +11,7 @@ from typing import List, cast
 
 from decoder_configs import StrictConfig, RelaxedConfig
 from geotools.geotool_4326 import GeoTool_4326
-from openlr_dereferencer_python.openlr_dereferencer.decoding import LineLocation, MapObjects, PointAlongLine, Coordinates
+from openlr_dereferencer.decoding import LineLocation, MapObjects, PointAlongLine, Coordinates
 from map_databases.webtool_sqlite import WebToolMapReaderSQLite, Line
 
 logging.basicConfig(level=logging.WARNING)

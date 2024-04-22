@@ -2,7 +2,7 @@ from typing import Dict
 
 from openlr import FRC
 
-from openlr_dereferencer_python.openlr_dereferencer.decoding import Config
+from openlr_dereferencer.decoding import Config
 
 #: When comparing an LRP FOW with a candidate's FOW, this matrix defines
 #: how well the candidate's FOW fits as replacement for the expected value.

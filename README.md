@@ -45,41 +45,41 @@ The PostgreSQL / PostGIS DB must contain tables representing lines (road segment
 
 ```python
 from openlr import FRC, FOW
-from map_databases.webtool import WebToolMapReader
+from webtool.map_databases import WebToolMapReader
 from typing import Dict
 from openlr_dereferencer import Config
 
 my_tolerated_lfrc: Dict[FRC, FRC] = {
-    FRC.FRC0: FRC.FRC1,
-    FRC.FRC1: FRC.FRC2,
-    FRC.FRC2: FRC.FRC3,
-    FRC.FRC3: FRC.FRC4,
-    FRC.FRC4: FRC.FRC5,
-    FRC.FRC5: FRC.FRC6,
-    FRC.FRC6: FRC.FRC7,
-    FRC.FRC7: FRC.FRC7,
+  FRC.FRC0: FRC.FRC1,
+  FRC.FRC1: FRC.FRC2,
+  FRC.FRC2: FRC.FRC3,
+  FRC.FRC3: FRC.FRC4,
+  FRC.FRC4: FRC.FRC5,
+  FRC.FRC5: FRC.FRC6,
+  FRC.FRC6: FRC.FRC7,
+  FRC.FRC7: FRC.FRC7,
 }
 
 my_config = Config(
-    tolerated_lfrc=my_tolerated_lfrc,
-    max_bear_deviation=30,
-    search_radius=30,
-    geo_weight=0.66,
-    frc_weight=0.17,
-    fow_weight=0.17,
-    bear_weight=0.0
+  tolerated_lfrc=my_tolerated_lfrc,
+  max_bear_deviation=30,
+  search_radius=30,
+  geo_weight=0.66,
+  frc_weight=0.17,
+  fow_weight=0.17,
+  bear_weight=0.0
 )
 
 rdr = WebToolMapReader(
-    host="",
-    port=5432,
-    user="",
-    password="",
-    dbname="test_db",
-    schema="sample",
-    lines_table="roads",
-    nodes_table="intersections",
-    config=my_config
+  host="",
+  port=5432,
+  user="",
+  password="",
+  dbname="test_db",
+  schema="sample",
+  lines_table="roads",
+  nodes_table="intersections",
+  config=my_config
 )
 
 res = rdr.match("C7yP6xTT6QEWE/t6/+0BCA==")

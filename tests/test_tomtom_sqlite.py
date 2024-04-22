@@ -1,7 +1,7 @@
 
-from decoder_configs import StrictConfig, RelaxedConfig
-from map_databases.tomtom_sqlite import TomTomMapReaderSQLite
-from geotools import GeoTool_4326
+from webtool.decoder_configs import StrictConfig, RelaxedConfig
+from webtool.map_databases import TomTomMapReaderSQLite
+from webtool.geotools import GeoTool_4326
 from openlr import Coordinates
 import unittest
 

@@ -30,11 +30,11 @@ from shapely import wkb
 from shapely.geometry import LineString, Point
 from shapely.ops import nearest_points
 
-from openlr_dereferencer_python.openlr_dereferencer import decode, Config
-from openlr_dereferencer_python.openlr_dereferencer.decoding import MapObjects, DEFAULT_CONFIG
-from openlr_dereferencer_python.openlr_dereferencer.maps import Line as AbstractLine, Node as AbstractNode
-from openlr_dereferencer_python.openlr_dereferencer.maps import MapReader
-from openlr_dereferencer_python.openlr_dereferencer.maps.abstract import GeoTool
+from openlr_dereferencer import decode, Config
+from openlr_dereferencer.decoding import MapObjects, DEFAULT_CONFIG
+from openlr_dereferencer.maps import Line as AbstractLine, Node as AbstractNode
+from openlr_dereferencer.maps import MapReader
+from openlr_dereferencer.maps.abstract import GeoTool
 
 GEOD = Geod(ellps="WGS84")
 

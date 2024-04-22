@@ -1,4 +1,4 @@
-from geotools import GeoTool_4326
+from webtool.geotools import GeoTool_4326
 from pytest import approx
 from shapely import wkt
 from math import degrees, radians
